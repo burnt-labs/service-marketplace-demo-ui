@@ -12,7 +12,7 @@ export function Navbar() {
   return (
     <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
-        <Link to="/" className="font-semibold text-foreground">
+        <Link to="/rfps" className="font-semibold text-foreground">
           Service Marketplace
         </Link>
 

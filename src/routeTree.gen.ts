@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RfpsIndexRouteImport } from './routes/rfps/index'
+import { Route as RfpsRfpIdRouteImport } from './routes/rfps/$rfpId'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 
 const LoginRoute = LoginRouteImport.update({
@@ -28,6 +30,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RfpsIndexRoute = RfpsIndexRouteImport.update({
+  id: '/rfps/',
+  path: '/rfps/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RfpsRfpIdRoute = RfpsRfpIdRouteImport.update({
+  id: '/rfps/$rfpId',
+  path: '/rfps/$rfpId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -38,11 +50,15 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/rfps/$rfpId': typeof RfpsRfpIdRoute
+  '/rfps/': typeof RfpsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/rfps/$rfpId': typeof RfpsRfpIdRoute
+  '/rfps': typeof RfpsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -50,24 +66,30 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/rfps/$rfpId': typeof RfpsRfpIdRoute
+  '/rfps/': typeof RfpsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/dashboard'
+  fullPaths: '/' | '/login' | '/dashboard' | '/rfps/$rfpId' | '/rfps/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/dashboard'
+  to: '/' | '/login' | '/dashboard' | '/rfps/$rfpId' | '/rfps'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/login'
     | '/_authenticated/dashboard'
+    | '/rfps/$rfpId'
+    | '/rfps/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  RfpsRfpIdRoute: typeof RfpsRfpIdRoute
+  RfpsIndexRoute: typeof RfpsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -91,6 +113,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rfps/': {
+      id: '/rfps/'
+      path: '/rfps'
+      fullPath: '/rfps/'
+      preLoaderRoute: typeof RfpsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rfps/$rfpId': {
+      id: '/rfps/$rfpId'
+      path: '/rfps/$rfpId'
+      fullPath: '/rfps/$rfpId'
+      preLoaderRoute: typeof RfpsRfpIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/dashboard': {
@@ -119,6 +155,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
+  RfpsRfpIdRoute: RfpsRfpIdRoute,
+  RfpsIndexRoute: RfpsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

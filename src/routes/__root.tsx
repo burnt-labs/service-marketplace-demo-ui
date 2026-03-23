@@ -7,8 +7,11 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
 import { AbstraxionProvider } from "@burnt-labs/abstraxion"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
 import { abstraxionConfig } from "@/lib/auth"
+
+const queryClient = new QueryClient()
 import { Navbar } from "@/components/layout/navbar"
 import type { RouterContext } from "../router"
 
@@ -46,9 +49,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <AbstraxionProvider config={abstraxionConfig}>
-          {children}
-        </AbstraxionProvider>
+        <QueryClientProvider client={queryClient}>
+          <AbstraxionProvider config={abstraxionConfig}>
+            {children}
+          </AbstraxionProvider>
+        </QueryClientProvider>
         <TanStackDevtools
           config={{
             position: "bottom-right",

@@ -29,6 +29,7 @@ export interface Ask {
   creator: string
   budget: Coin
   status: AskStatus
+  metadata_url: string
   locked_funds: Coin | null
   selected_bid: string | null
 }
@@ -39,6 +40,32 @@ export interface Bid {
   provider: string
   price: Coin
   funds_recipient: string | null
+}
+
+// ─── Ask metadata (off-chain JSON stored at ask.metadata_url) ────────────────
+
+export interface AskMetadata {
+  version?: string
+  title?: string
+  description?: string
+  category?: string
+  tags?: string[]
+  skills_required?: string[]
+  deliverables?: string[]
+  timeline?: { estimated_days?: number; deadline?: string }
+  attachments?: { name: string; url: string }[]
+  contact?: Record<string, string>
+}
+
+/** Fetches and parses the off-chain metadata JSON for an ask. Returns null on any failure. */
+export async function fetchAskMetadata(url: string): Promise<AskMetadata | null> {
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    return (await res.json()) as AskMetadata
+  } catch {
+    return null
+  }
 }
 
 // ─── Response types ───────────────────────────────────────────────────────────
@@ -134,8 +161,8 @@ export function getConfig(): Promise<ConfigResponse> {
 
 export const msg = {
   /** Create a new ask (RFP). `budget` is informational — no funds sent. */
-  createAsk(budget: Coin) {
-    return { create_ask: { budget } }
+  createAsk(budget: Coin, metadataUrl: string) {
+    return { create_ask: { budget, metadata_url: metadataUrl } }
   },
 
   /** Submit a bid on an open ask. No funds required at bid time. */
@@ -151,11 +178,12 @@ export const msg = {
 
   /**
    * Select a winning bid and lock funds into escrow.
-   * Caller must send funds equal to the bid price:
+   * `expectedPrice` is validated by the contract (slippage guard).
+   * Caller must also send funds equal to the bid price:
    *   signingClient.execute(sender, CONTRACT_ADDRESS, msg.selectBid(...), "auto", undefined, [bidPrice])
    */
-  selectBid(askId: string, bidId: string) {
-    return { select_bid: { ask_id: askId, bid_id: bidId } }
+  selectBid(askId: string, bidId: string, expectedPrice: Coin) {
+    return { select_bid: { ask_id: askId, bid_id: bidId, expected_price: expectedPrice } }
   },
 
   /** Provider marks their work as complete (InProgress → WorkSubmitted). */

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://service-marketplace-ui.riftbox.dev/ask-metadata-schema.json",
+  "version": "1.0",
+
+  "title": "Build a CosmWasm staking rewards dashboard",
+  "description": "We need a read-only web dashboard that queries staking rewards across multiple XION validators and displays historical APR, claimable rewards, and compounding projections. The UI should be responsive and match our existing brand kit (provided on acceptance).",
+
+  "category": "development",
+  "tags": ["cosmwasm", "react", "xion", "frontend", "dashboard"],
+
+  "skills_required": [
+    "React / TypeScript",
+    "CosmJS / CosmWasm queries",
+    "Tailwind CSS",
+    "REST API integration"
+  ],
+
+  "deliverables": [
+    "Source code in a private GitHub repo (transferred on completion)",
+    "Live deployment on Cloudflare Pages or Vercel",
+    "Basic README covering local dev setup",
+    "1 round of revision included"
+  ],
+
+  "timeline": {
+    "estimated_days": 14,
+    "deadline": "2026-04-15"
+  },
+
+  "attachments": [
+    {
+      "name": "Brand kit",
+      "url": "https://example.com/brand-kit.zip"
+    },
+    {
+      "name": "Figma mockups",
+      "url": "https://figma.com/file/example"
+    }
+  ],
+
+  "contact": {
+    "preferred": "on-chain messages",
+    "discord": "alice#1234"
+  }
+}

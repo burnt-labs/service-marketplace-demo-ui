@@ -8,6 +8,7 @@ import {
   CONTRACT_ADDRESS,
   getAsk,
   listBidsByAsk,
+  fetchAskMetadata,
   msg,
   type AskStatus,
 } from "@/lib/contract"
@@ -49,7 +50,11 @@ function RfpDetailPage() {
 
   const { data: askData, isLoading: askLoading, error: askError } = useQuery({
     queryKey: ["ask", rfpId],
-    queryFn: () => getAsk(rfpId),
+    queryFn: async () => {
+      const result = await getAsk(rfpId)
+      const metadata = await fetchAskMetadata(result.ask.metadata_url)
+      return { ...result, metadata }
+    },
   })
 
   const { data: bidsData, isLoading: bidsLoading, refetch: refetchBids } = useQuery({
@@ -75,7 +80,7 @@ function RfpDetailPage() {
       await (signingClient as unknown as GranteeSignerClient).execute(
         address,
         CONTRACT_ADDRESS,
-        msg.selectBid(rfpId, confirmBid.id),
+        msg.selectBid(rfpId, confirmBid.id, confirmBid.price),
         "auto",
         undefined,
         [{ amount: confirmBid.price.amount, denom: confirmBid.price.denom }],
@@ -131,7 +136,7 @@ function RfpDetailPage() {
     )
   }
 
-  const { ask } = askData
+  const { ask, metadata } = askData
   const bids = bidsData ?? []
 
   return (
@@ -210,17 +215,71 @@ function RfpDetailPage() {
         {/* Main */}
         <div className="space-y-6 lg:col-span-2">
           <div className="space-y-3">
-            <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", STATUS_STYLES[ask.status])}>
-              {STATUS_LABEL[ask.status]}
-            </span>
-            <p className="font-mono text-lg font-semibold break-all">{ask.id}</p>
-            <p className="text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", STATUS_STYLES[ask.status])}>
+                {STATUS_LABEL[ask.status]}
+              </span>
+              {metadata?.category && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                  {metadata.category}
+                </span>
+              )}
+              {metadata?.tags?.map((tag) => (
+                <span key={tag} className="rounded-full bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground/70">
+                  {tag}
+                </span>
+              ))}
+            </div>
+
+            <h1 className="text-xl font-semibold">
+              {metadata?.title ?? <span className="font-mono text-base">{ask.id}</span>}
+            </h1>
+
+            {metadata?.description && (
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {metadata.description}
+              </p>
+            )}
+
+            <p className="text-xs text-muted-foreground/60">
               Posted by{" "}
               <span className="font-mono">
                 {ask.creator.slice(0, 12)}…{ask.creator.slice(-6)}
               </span>
             </p>
           </div>
+
+          {/* Skills & Deliverables */}
+          {(metadata?.skills_required?.length || metadata?.deliverables?.length) && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {metadata.skills_required?.length && (
+                <div className="rounded-lg border border-border p-4 space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Skills Required</p>
+                  <ul className="space-y-1">
+                    {metadata.skills_required.map((s) => (
+                      <li key={s} className="flex items-center gap-2 text-sm">
+                        <span className="h-1 w-1 rounded-full bg-muted-foreground/40 shrink-0" />
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {metadata.deliverables?.length && (
+                <div className="rounded-lg border border-border p-4 space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Deliverables</p>
+                  <ul className="space-y-1">
+                    {metadata.deliverables.map((d) => (
+                      <li key={d} className="flex items-center gap-2 text-sm">
+                        <span className="h-1 w-1 rounded-full bg-muted-foreground/40 shrink-0" />
+                        {d}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Bids list */}
           <div className="rounded-lg border border-border">
@@ -302,6 +361,50 @@ function RfpDetailPage() {
               </p>
             )}
           </div>
+
+          {/* Timeline */}
+          {metadata?.timeline && (
+            <div className="rounded-lg border border-border p-5 space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Timeline</p>
+              {metadata.timeline.estimated_days && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Estimated</span>
+                  <span>{metadata.timeline.estimated_days} days</span>
+                </div>
+              )}
+              {metadata.timeline.deadline && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Deadline</span>
+                  <span>{metadata.timeline.deadline}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Attachments */}
+          {metadata?.attachments?.length && (
+            <div className="rounded-lg border border-border p-5 space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Attachments</p>
+              <ul className="space-y-2">
+                {metadata.attachments.map((a) => (
+                  <li key={a.url}>
+                    <a
+                      href={a.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm text-primary hover:underline"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6" />
+                        <path d="m21 3-9 9" /><path d="M15 3h6v6" />
+                      </svg>
+                      {a.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {ask.status === "open" && (
             <div className="rounded-lg border border-border p-5">

@@ -17,12 +17,14 @@ export function CreateAskModal({ onCreated }: CreateAskModalProps) {
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState("")
   const [denom, setDenom] = useState("uxion")
+  const [metadataUrl, setMetadataUrl] = useState("https://gist.githubusercontent.com/jburnt/f00c89cde01cc9dafb494191d8210b01/raw/9561ade6cb012577c488a740920e2453a21252c3/metadtada.json")
   const [status, setStatus] = useState<Status>("idle")
   const [errorMsg, setErrorMsg] = useState("")
 
   function reset() {
     setAmount("")
     setDenom("uxion")
+    setMetadataUrl("")
     setStatus("idle")
     setErrorMsg("")
   }
@@ -40,7 +42,7 @@ export function CreateAskModal({ onCreated }: CreateAskModalProps) {
       await (signingClient as unknown as GranteeSignerClient).execute(
         address,
         CONTRACT_ADDRESS,
-        msg.createAsk({ amount: String(Math.round(Number(amount) * 1_000_000)), denom }),
+        msg.createAsk({ amount: String(Math.round(Number(amount) * 1_000_000)), denom }, metadataUrl),
         "auto",
       )
       setStatus("success")
@@ -159,6 +161,21 @@ export function CreateAskModal({ onCreated }: CreateAskModalProps) {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Enter amount in XION (e.g. 10 = 10 XION)
+                </p>
+              </div>
+
+              {/* Metadata URL */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Metadata URL</label>
+                <input
+                  type="url"
+                  value={metadataUrl}
+                  onChange={(e) => setMetadataUrl(e.target.value)}
+                  required
+                  className="w-full rounded-md border border-border bg-muted/40 px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Link to a JSON file describing the work (title, description, requirements).
                 </p>
               </div>
 

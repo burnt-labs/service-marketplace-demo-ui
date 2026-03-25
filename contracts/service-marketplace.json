@@ -7,10 +7,19 @@
     "title": "InstantiateMsg",
     "type": "object",
     "required": [
-      "admin"
+      "allowed_denoms",
+      "owner"
     ],
     "properties": {
-      "admin": {
+      "allowed_denoms": {
+        "description": "Denoms accepted for ask budgets and bid prices. Empty = all denoms allowed.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "owner": {
+        "description": "Initial owner (admin). Supports 2-step transfers via UpdateOwnership.",
         "type": "string"
       }
     },
@@ -21,7 +30,6 @@
     "title": "ExecuteMsg",
     "oneOf": [
       {
-        "description": "Create a new ask (request for work). `budget` is informational.",
         "type": "object",
         "required": [
           "create_ask"
@@ -30,11 +38,15 @@
           "create_ask": {
             "type": "object",
             "required": [
-              "budget"
+              "budget",
+              "metadata_url"
             ],
             "properties": {
               "budget": {
                 "$ref": "#/definitions/Coin"
+              },
+              "metadata_url": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -43,7 +55,6 @@
         "additionalProperties": false
       },
       {
-        "description": "Select a winning bid and lock funds into escrow. Must send funds == bid.price.",
         "type": "object",
         "required": [
           "select_bid"
@@ -53,7 +64,8 @@
             "type": "object",
             "required": [
               "ask_id",
-              "bid_id"
+              "bid_id",
+              "expected_price"
             ],
             "properties": {
               "ask_id": {
@@ -61,6 +73,9 @@
               },
               "bid_id": {
                 "type": "string"
+              },
+              "expected_price": {
+                "$ref": "#/definitions/Coin"
               }
             },
             "additionalProperties": false
@@ -69,7 +84,6 @@
         "additionalProperties": false
       },
       {
-        "description": "Release a partial amount from escrow. Callable by ask creator or admin.",
         "type": "object",
         "required": [
           "partial_disbursement"
@@ -79,17 +93,13 @@
             "type": "object",
             "required": [
               "amount",
-              "ask_id",
-              "recipient"
+              "ask_id"
             ],
             "properties": {
               "amount": {
                 "$ref": "#/definitions/Coin"
               },
               "ask_id": {
-                "type": "string"
-              },
-              "recipient": {
                 "type": "string"
               }
             },
@@ -99,7 +109,6 @@
         "additionalProperties": false
       },
       {
-        "description": "Confirm the provider's completion and release remaining escrowed funds.",
         "type": "object",
         "required": [
           "confirm_completion"
@@ -121,7 +130,6 @@
         "additionalProperties": false
       },
       {
-        "description": "Cancel an Open ask (no escrow involved).",
         "type": "object",
         "required": [
           "cancel_ask"
@@ -143,7 +151,6 @@
         "additionalProperties": false
       },
       {
-        "description": "Submit a bid on an open ask. No funds required.",
         "type": "object",
         "required": [
           "submit_bid"
@@ -250,7 +257,7 @@
         "additionalProperties": false
       },
       {
-        "description": "Resolve a dispute by sending an arbitrary amount to a recipient.",
+        "description": "Resolve a dispute by splitting locked funds across up to MAX_RESOLVE_RECIPIENTS. All splits must share the same denom as the locked funds and sum to exactly the locked amount.",
         "type": "object",
         "required": [
           "admin_resolve"
@@ -259,19 +266,18 @@
           "admin_resolve": {
             "type": "object",
             "required": [
-              "amount",
               "ask_id",
-              "recipient"
+              "splits"
             ],
             "properties": {
-              "amount": {
-                "$ref": "#/definitions/Coin"
-              },
               "ask_id": {
                 "type": "string"
               },
-              "recipient": {
-                "type": "string"
+              "splits": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/RecipientShare"
+                }
               }
             },
             "additionalProperties": false
@@ -280,29 +286,96 @@
         "additionalProperties": false
       },
       {
-        "description": "Transfer admin rights to a new address.",
+        "description": "Replace the allowlisted denoms. Pass an empty list to allow all denoms.",
         "type": "object",
         "required": [
-          "admin_update_config"
+          "admin_set_allowed_denoms"
         ],
         "properties": {
-          "admin_update_config": {
+          "admin_set_allowed_denoms": {
             "type": "object",
             "required": [
-              "new_admin"
+              "denoms"
             ],
             "properties": {
-              "new_admin": {
-                "type": "string"
+              "denoms": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
               }
             },
             "additionalProperties": false
           }
         },
         "additionalProperties": false
+      },
+      {
+        "description": "Update the contract's ownership. The `action` to be provided can be either to propose transferring ownership to an account, accept a pending ownership transfer, or renounce the ownership permanently.",
+        "type": "object",
+        "required": [
+          "update_ownership"
+        ],
+        "properties": {
+          "update_ownership": {
+            "$ref": "#/definitions/Action"
+          }
+        },
+        "additionalProperties": false
       }
     ],
     "definitions": {
+      "Action": {
+        "description": "Actions that can be taken to alter the contract's ownership",
+        "oneOf": [
+          {
+            "description": "Propose to transfer the contract's ownership to another account, optionally with an expiry time.\n\nCan only be called by the contract's current owner.\n\nAny existing pending ownership transfer is overwritten.",
+            "type": "object",
+            "required": [
+              "transfer_ownership"
+            ],
+            "properties": {
+              "transfer_ownership": {
+                "type": "object",
+                "required": [
+                  "new_owner"
+                ],
+                "properties": {
+                  "expiry": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/Expiration"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "new_owner": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Accept the pending ownership transfer.\n\nCan only be called by the pending owner.",
+            "type": "string",
+            "enum": [
+              "accept_ownership"
+            ]
+          },
+          {
+            "description": "Give up the contract's ownership and the possibility of appointing a new owner.\n\nCan only be invoked by the contract's current owner.\n\nAny existing pending ownership transfer is canceled.",
+            "type": "string",
+            "enum": [
+              "renounce_ownership"
+            ]
+          }
+        ]
+      },
       "Coin": {
         "type": "object",
         "required": [
@@ -319,8 +392,84 @@
         },
         "additionalProperties": false
       },
+      "Expiration": {
+        "description": "Expiration represents a point in time when some event happens. It can compare with a BlockInfo and will return is_expired() == true once the condition is hit (and for every block in the future)",
+        "oneOf": [
+          {
+            "description": "AtHeight will expire when `env.block.height` >= height",
+            "type": "object",
+            "required": [
+              "at_height"
+            ],
+            "properties": {
+              "at_height": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "AtTime will expire when `env.block.time` >= time",
+            "type": "object",
+            "required": [
+              "at_time"
+            ],
+            "properties": {
+              "at_time": {
+                "$ref": "#/definitions/Timestamp"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Never will never expire. Used to express the empty variant",
+            "type": "object",
+            "required": [
+              "never"
+            ],
+            "properties": {
+              "never": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "RecipientShare": {
+        "description": "One entry in an AdminResolve split: a recipient address and the amount (in the ask's locked-funds denom) they should receive.",
+        "type": "object",
+        "required": [
+          "amount",
+          "recipient"
+        ],
+        "properties": {
+          "amount": {
+            "$ref": "#/definitions/Uint128"
+          },
+          "recipient": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Timestamp": {
+        "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
+        "allOf": [
+          {
+            "$ref": "#/definitions/Uint64"
+          }
+        ]
+      },
       "Uint128": {
         "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+        "type": "string"
+      },
+      "Uint64": {
+        "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
         "type": "string"
       }
     }
@@ -428,16 +577,6 @@
                   "string",
                   "null"
                 ]
-              },
-              "status": {
-                "anyOf": [
-                  {
-                    "$ref": "#/definitions/AskStatus"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
               }
             },
             "additionalProperties": false
@@ -448,33 +587,43 @@
       {
         "type": "object",
         "required": [
-          "get_config"
+          "get_allowed_denoms"
         ],
         "properties": {
-          "get_config": {
+          "get_allowed_denoms": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Query the contract's ownership information",
+        "type": "object",
+        "required": [
+          "ownership"
+        ],
+        "properties": {
+          "ownership": {
             "type": "object",
             "additionalProperties": false
           }
         },
         "additionalProperties": false
       }
-    ],
-    "definitions": {
-      "AskStatus": {
-        "type": "string",
-        "enum": [
-          "open",
-          "in_progress",
-          "work_submitted",
-          "completed",
-          "cancelled"
-        ]
-      }
-    }
+    ]
   },
   "migrate": null,
   "sudo": null,
   "responses": {
+    "get_allowed_denoms": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Array_of_String",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "get_ask": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "AskResponse",
@@ -499,6 +648,7 @@
             "budget",
             "creator",
             "id",
+            "metadata_url",
             "status"
           ],
           "properties": {
@@ -520,6 +670,9 @@
                   "type": "null"
                 }
               ]
+            },
+            "metadata_url": {
+              "type": "string"
             },
             "selected_bid": {
               "type": [
@@ -639,38 +792,6 @@
         }
       }
     },
-    "get_config": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ConfigResponse",
-      "type": "object",
-      "required": [
-        "config"
-      ],
-      "properties": {
-        "config": {
-          "$ref": "#/definitions/Config"
-        }
-      },
-      "additionalProperties": false,
-      "definitions": {
-        "Addr": {
-          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
-          "type": "string"
-        },
-        "Config": {
-          "type": "object",
-          "required": [
-            "admin"
-          ],
-          "properties": {
-            "admin": {
-              "$ref": "#/definitions/Addr"
-            }
-          },
-          "additionalProperties": false
-        }
-      }
-    },
     "list_asks": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Array_of_AskResponse",
@@ -689,6 +810,7 @@
             "budget",
             "creator",
             "id",
+            "metadata_url",
             "status"
           ],
           "properties": {
@@ -710,6 +832,9 @@
                   "type": "null"
                 }
               ]
+            },
+            "metadata_url": {
+              "type": "string"
             },
             "selected_bid": {
               "type": [
@@ -843,6 +968,101 @@
         },
         "Uint128": {
           "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+          "type": "string"
+        }
+      }
+    },
+    "ownership": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Ownership_for_String",
+      "description": "The contract's ownership info",
+      "type": "object",
+      "properties": {
+        "owner": {
+          "description": "The contract's current owner. `None` if the ownership has been renounced.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pending_expiry": {
+          "description": "The deadline for the pending owner to accept the ownership. `None` if there isn't a pending ownership transfer, or if a transfer exists and it doesn't have a deadline.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Expiration"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pending_owner": {
+          "description": "The account who has been proposed to take over the ownership. `None` if there isn't a pending ownership transfer.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Expiration": {
+          "description": "Expiration represents a point in time when some event happens. It can compare with a BlockInfo and will return is_expired() == true once the condition is hit (and for every block in the future)",
+          "oneOf": [
+            {
+              "description": "AtHeight will expire when `env.block.height` >= height",
+              "type": "object",
+              "required": [
+                "at_height"
+              ],
+              "properties": {
+                "at_height": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "AtTime will expire when `env.block.time` >= time",
+              "type": "object",
+              "required": [
+                "at_time"
+              ],
+              "properties": {
+                "at_time": {
+                  "$ref": "#/definitions/Timestamp"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "Never will never expire. Used to express the empty variant",
+              "type": "object",
+              "required": [
+                "never"
+              ],
+              "properties": {
+                "never": {
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "Timestamp": {
+          "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint64"
+            }
+          ]
+        },
+        "Uint64": {
+          "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
           "type": "string"
         }
       }

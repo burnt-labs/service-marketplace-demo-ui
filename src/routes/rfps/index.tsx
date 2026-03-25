@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { listAsks } from "@/lib/contract"
+import { listAsks, fetchAskMetadata } from "@/lib/contract"
 import { CreateAskModal } from "@/components/ask/create-ask-modal"
 import { cn } from "@/lib/utils"
-import type { AskStatus } from "@/lib/contract"
+import type { AskStatus, AskMetadata } from "@/lib/contract"
 
 export const Route = createFileRoute("/rfps/")({
   component: RfpsPage,
@@ -36,7 +36,13 @@ function formatAmount(amount: string, denom: string) {
 function RfpsPage() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["asks"],
-    queryFn: () => listAsks(),
+    queryFn: async () => {
+      const asks = await listAsks()
+      const metadatas = await Promise.all(
+        asks.map(({ ask }) => fetchAskMetadata(ask.metadata_url)),
+      )
+      return asks.map((r, i) => ({ ...r, metadata: metadatas[i] as AskMetadata | null }))
+    },
   })
 
   const asks = data ?? []
@@ -65,10 +71,14 @@ function RfpsPage() {
         <div className="rounded-lg border border-border">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="border-b border-border px-5 py-5 last:border-0">
-              <div className="space-y-2">
-                <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-                <div className="h-4 w-48 animate-pulse rounded bg-muted" />
-                <div className="h-3 w-32 animate-pulse rounded bg-muted" />
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="h-3.5 w-16 animate-pulse rounded bg-muted" />
+                  <div className="h-4 w-56 animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-72 animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-32 animate-pulse rounded bg-muted" />
+                </div>
+                <div className="h-5 w-20 animate-pulse rounded bg-muted" />
               </div>
             </div>
           ))}
@@ -89,7 +99,7 @@ function RfpsPage() {
 
       {!isLoading && asks.length > 0 && (
         <div className="rounded-lg border border-border">
-          {asks.map(({ ask }) => (
+          {asks.map(({ ask, metadata }) => (
             <Link
               key={ask.id}
               to="/rfps/$rfpId"
@@ -106,11 +116,24 @@ function RfpsPage() {
                   >
                     {STATUS_LABEL[ask.status]}
                   </span>
+                  {metadata?.category && (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                      {metadata.category}
+                    </span>
+                  )}
                 </div>
-                <p className="font-mono text-sm text-foreground">
-                  {ask.id}
+
+                <p className="text-sm font-medium text-foreground">
+                  {metadata?.title ?? <span className="font-mono text-muted-foreground">{ask.id}</span>}
                 </p>
-                <p className="font-mono text-xs text-muted-foreground">
+
+                {metadata?.description && (
+                  <p className="line-clamp-1 text-xs text-muted-foreground">
+                    {metadata.description}
+                  </p>
+                )}
+
+                <p className="font-mono text-xs text-muted-foreground/60">
                   {ask.creator.slice(0, 12)}…{ask.creator.slice(-6)}
                 </p>
               </div>
@@ -119,6 +142,11 @@ function RfpsPage() {
                 <p className="font-semibold tabular-nums">
                   {formatAmount(ask.budget.amount, ask.budget.denom)}
                 </p>
+                {metadata?.timeline?.deadline && (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    due {metadata.timeline.deadline}
+                  </p>
+                )}
               </div>
             </Link>
           ))}

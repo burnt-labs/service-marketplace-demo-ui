@@ -1,7 +1,7 @@
 import {
   useAbstraxionAccount,
   useAbstraxionSigningClient,
-} from "@burnt-labs/abstraxion"
+} from "@burnt-labs/abstraxion-react"
 
 export const abstraxionConfig = {
   treasury: import.meta.env.VITE_ABSTRAXION_TREASURY_CONTRACT as string,

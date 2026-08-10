@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-router"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
-import { AbstraxionProvider } from "@burnt-labs/abstraxion"
+import { AbstraxionProvider } from "@burnt-labs/abstraxion-react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
 import { abstraxionConfig } from "@/lib/auth"

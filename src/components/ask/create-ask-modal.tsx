@@ -3,7 +3,7 @@ import { useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { CONTRACT_ADDRESS, msg } from "@/lib/contract"
-import type { GranteeSignerClient } from "@burnt-labs/abstraxion"
+import type { GranteeSignerClient } from "@burnt-labs/abstraxion-react"
 import { cn } from "@/lib/utils"
 
 interface CreateAskModalProps {

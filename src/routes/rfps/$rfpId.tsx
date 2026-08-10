@@ -13,7 +13,7 @@ import {
   type AskStatus,
 } from "@/lib/contract"
 import { cn } from "@/lib/utils"
-import type { GranteeSignerClient } from "@burnt-labs/abstraxion"
+import type { GranteeSignerClient } from "@burnt-labs/abstraxion-react"
 
 export const Route = createFileRoute("/rfps/$rfpId")({
   component: RfpDetailPage,

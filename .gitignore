@@ -1,6 +1,8 @@
 node_modules
 .DS_Store
 dist
+!third_party/image-size/dist/
+!third_party/image-size/dist/**
 dist-ssr
 *.local
 count.txt

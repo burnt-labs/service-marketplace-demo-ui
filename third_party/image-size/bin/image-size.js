@@ -44,9 +44,11 @@ files.forEach(function (image) {
         )
       })
     } else {
+      process.exitCode = 1
       console.error("file doesn't exist - ", image)
     }
   } catch (e) {
+    process.exitCode = 1
     // console.error(e.stack)
     console.error(colorize(e.message, red), '-', image)
   }

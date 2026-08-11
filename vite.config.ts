@@ -8,8 +8,6 @@ import { cloudflare } from "@cloudflare/vite-plugin"
 
 const config = defineConfig(({ mode }) => ({
   plugins: [
-    // Polyfill Node.js globals needed by CosmJS in the browser.
-    // protocolImports: false prevents intercepting node: protocol imports used by Nitro/crossws
     devtools(),
     // this is the plugin that enables path aliases
     viteTsConfigPaths({

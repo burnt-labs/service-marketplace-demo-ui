@@ -10,7 +10,7 @@
     "SECURITY_PATCH.md"
   ],
   "engines": {
-    "node": ">=16.x"
+    "node": ">=24"
   },
   "bin": "bin/image-size.js",
   "keywords": [

@@ -56,9 +56,9 @@
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1",
+    "vite": "^7.3.5",
     "vite-plugin-node-polyfills": "^0.25.0",
-    "vitest": "^3.2.4",
+    "vitest": "^3.2.6",
     "web-vitals": "^5.1.0",
     "wrangler": "^4.76.0"
   }
